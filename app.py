@@ -57,9 +57,9 @@ st.sidebar.write(f"Device: {config.device}")
 if uploaded_files:
     file_data = [(f.name, f.read()) for f in uploaded_files]
 
-    hash_files = hash_files(file_data)
+    file_hashes = hash_files(file_data)
     combined_hash = hashlib.sha256(
-        "".join(sorted(hash_files.values())).encode()
+        "".join(sorted(file_hashes.values())).encode()
         ).hexdigest()
 
     index_dir = f"faiss_index_{combined_hash}"
@@ -99,8 +99,9 @@ if uploaded_files:
         if "db" not in st.session_state:
             st.session_state.db = load_index(embeddings, index_dir)
 
-    if config.device == "cuda" and "db" in st.session_state:
+    if config.device == "cuda" and "db" in st.session_state and "gpu_loaded" not in st.session_state:
         st.session_state.db = cuda.use_gpu(st.session_state.db)
+        st.session_state.gpu_loaded = True
 
     st.sidebar.success("Document Ready");
     st.sidebar.markdown("Built with 💗 by Ramen")
@@ -114,7 +115,7 @@ if uploaded_files:
         st.session_state.messages = []
 
     for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["conent"])
+        st.chat_message(msg["role"]).write(msg["content"])
 
     #input
     query = st.chat_input("Ask Scholia")
@@ -193,7 +194,7 @@ if uploaded_files:
                 st.error(f"LLM error: {e}")
                 st.stop()
 
-        st.session_state.messaes.append(
+        st.session_state.messages.append(
             {"role": "assistant", "content": full_response}
         )
 
