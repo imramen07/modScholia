@@ -1,16 +1,6 @@
 import streamlit as st
-import tempfile
 import hashlib
-import torch
-import os
-import faiss
 
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
-from langchain_ollama import OllamaLLM
-from sentence_transformers import CrossEncoder
 from collections import defaultdict
 
 import config.settings as config
@@ -20,7 +10,6 @@ from core.llm import load_llm
 from core.reranker import load_reranker
 
 from ingestion.loader import load_pdf
-from ingestion.processor import process_files
 from ingestion.splitter import split_docs
 
 from pipeline.context_builder import build_chat_context
