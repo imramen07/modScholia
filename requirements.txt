@@ -1,0 +1,10 @@
+streamlit>=1.26
+torch
+faiss-cpu
+langchain
+langchain-ollama
+langchain-huggingface
+langchain-community
+sentence-transformers
+pypdf
+langchain-text-splitters
