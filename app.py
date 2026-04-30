@@ -58,8 +58,12 @@ if uploaded_files:
         st.session_state.processed_file != combined_hash
     )
 
-    #loaderline 62
-    embeddings = load_embeddings(device = "cpu")
+    #loader
+    @st.cache_resource
+    def load_embeddings_cached(device):
+        return load_embeddings(device)
+    
+    embeddings = load_embeddings_cached(config.device)
 
     if file_changed:
         with st.spinner("Indexing Document..."):
@@ -96,8 +100,15 @@ if uploaded_files:
     st.sidebar.markdown("Built with 💗 by Ramen")
 
     #loaders
-    llm = load_llm()
-    reranker = load_reranker()
+    @st.cache_resource
+    def load_llm_cached():
+        return load_llm()
+    llm = load_llm_cached()
+
+    @st.cache_resource
+    def load_reranker_cached(device):
+        return load_reranker(device)
+    reranker = load_reranker_cached(config.device)
 
     #chat state
     if "messages" not in st.session_state:
