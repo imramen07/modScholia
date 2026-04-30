@@ -8,3 +8,4 @@ langchain-community
 sentence-transformers
 pypdf
 langchain-text-splitters
+rank-bm25

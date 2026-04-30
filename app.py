@@ -15,14 +15,18 @@ from ingestion.splitter import split_docs
 from pipeline.context_builder import build_chat_context
 from pipeline.intent import detect_intent
 from pipeline.prompt_builder import build_prompt
+from pipeline.query_rewriter import rewrite_query
 
 from retrieval.rerank import rerank_docs
 from retrieval.retriever import retrieve_docs
+from retrieval.bm25_store import BM25Store
 
 import utils.cuda as cuda
 from utils.deduplication import deduplicate_docs
 from utils.extract_relevance import extract_relevant_sentences
 from utils.hashing import hash_files
+from utils.ensure_gpu import ensure_gpu
+from utils.render import render_chat
 
 from vectorstore.faiss_store import load_index, create_index
 
@@ -42,6 +46,12 @@ uploaded_files = st.sidebar.file_uploader(
 )
 
 st.sidebar.write(f"Device: {config.device}")
+
+#chat state
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+render_chat()
 
 if uploaded_files:
     file_data = [(f.name, f.read()) for f in uploaded_files]
@@ -88,13 +98,16 @@ if uploaded_files:
             st.session_state.processed_file = combined_hash
             st.session_state.messages = []
 
+            bm25_store = BM25Store(chunks)
+            st.session_state.bm25 = bm25_store
+
+            st.session_state.db = ensure_gpu(st.session_state.db)
+
     else:
         if "db" not in st.session_state:
             st.session_state.db = load_index(embeddings, index_dir)
 
-    if config.device == "cuda" and "db" in st.session_state and "gpu_loaded" not in st.session_state:
-        st.session_state.db = cuda.use_gpu(st.session_state.db)
-        st.session_state.gpu_loaded = True
+            st.session_state.db = ensure_gpu(st.session_state.db)
 
     st.sidebar.success("Document Ready");
     st.sidebar.markdown("Built with 💗 by Ramen")
@@ -110,17 +123,14 @@ if uploaded_files:
         return load_reranker(device)
     reranker = load_reranker_cached(config.device)
 
-    #chat state
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
-
     #input
     query = st.chat_input("Ask Scholia")
 
-    if query and not query.strip():
+    if not query:
+        st.stop()
+
+    query = query.strip()
+    if not query:
         st.stop()
 
     #query pipeline
@@ -128,39 +138,53 @@ if uploaded_files:
         st.session_state.messages.append({"role": "user", "content": query})
         st.chat_message("user").write(query)
 
-        refined_query = query.lower().strip()
+        primary_query, query_variants = rewrite_query(query)
 
+        if "db" not in st.session_state:
+            st.warning("Please upload and index a PDF first.")
+            st.stop()
+        
         db = st.session_state.db
 
-        #retrieval
-        docs = retrieve_docs(db, refined_query)
+        #multiquery retrieval
+        all_docs = []
+
+        bm25_store = st.session_state.bm25
+
+        for q in query_variants:
+            faiss_docs = retrieve_docs(db, q) or []
+            bm25_docs = bm25_store.search(q, k = 5)
+
+            all_docs.extend(faiss_docs)
+            all_docs.extend(bm25_docs)
 
         #not retrieved
-        if not docs:
+        if not all_docs:
             response = "Not found in document"
             st.session_state.messages.append(
                 {"role": "assistant", "content": response}
             )
             st.stop()
-        
-        #rerank
-        top_docs = rerank_docs(docs, refined_query, reranker)
 
-        #not reranked
+        #context
+        top_docs = deduplicate_docs(all_docs)
+
+        #fallback
         if not top_docs:
             response = "Not found in document"
             st.session_state.messages.append(
                 {"role": "assistant", "content": response}
             )
             st.stop()
-        
-        #context
-        top_docs = deduplicate_docs(top_docs)
 
-        context, pages_used = extract_relevant_sentences(top_docs, refined_query)
+        #rerank
+        rerank_query = query;
+        top_docs = rerank_docs(top_docs, rerank_query, reranker)
+
+        context, pages_used = extract_relevant_sentences(top_docs, primary_query)
 
         #not context / fallaback
-        if len(context.strip()) < 50:
+        if not pages_used:
             top_doc = top_docs[0]
             page = top_doc.metadata.get("page", 0)
             source = top_doc.metadata.get("source", "Unknown")
@@ -169,7 +193,7 @@ if uploaded_files:
         
         #chat history, intent
         chat_history = build_chat_context(st.session_state.messages)
-        intent = detect_intent(refined_query)
+        intent = detect_intent(primary_query)
 
         extra = {
             "summary": "Give a concise summary.",
@@ -178,7 +202,7 @@ if uploaded_files:
         }.get(intent, "")
 
         #prompt
-        prompt = build_prompt(context, refined_query, extra, chat_history)
+        prompt = build_prompt(context, primary_query, extra, chat_history)
 
         #llm
         with st.spinner("Thinking..."):

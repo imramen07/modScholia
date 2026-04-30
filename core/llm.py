@@ -4,8 +4,16 @@ from config.settings import LLM_MODEL
 
 @st.cache_resource
 def load_llm():
-    return OllamaLLM(
-        model = LLM_MODEL,
-        num_ctx = 4096,
-        temperature = 0.0
-    )
+    
+    try:
+        llm = OllamaLLM(
+            model = LLM_MODEL,
+            num_ctx = 4096,
+            temperature = 0.0,
+            top_p = 0.9,
+            streaming = True
+        )
+        return llm
+    
+    except Exception as e:
+        raise RuntimeError(f"LLM failed to load: {e}")
