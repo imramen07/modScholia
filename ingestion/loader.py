@@ -8,7 +8,7 @@ def load_pdf(name, data):
     file_hash = hash_bytes(data)
 
     with tempfile.NamedTemporaryFile(delete = False, suffix = ".pdf") as tmp:
-        tmp.write(data);
+        tmp.write(data)
         tmp_path = tmp.name
 
     try:
