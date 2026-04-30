@@ -58,8 +58,8 @@ if uploaded_files:
         st.session_state.processed_file != combined_hash
     )
 
-    #loader
-    embeddings = load_embeddings()
+    #loaderline 62
+    embeddings = load_embeddings(device = "cpu")
 
     if file_changed:
         with st.spinner("Indexing Document..."):
