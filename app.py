@@ -1,3 +1,5 @@
+import sys
+import subprocess
 import streamlit as st
 import hashlib
 
@@ -29,6 +31,25 @@ from utils.ensure_gpu import ensure_gpu
 from utils.render import render_chat
 
 from vectorstore.faiss_store import load_index, create_index
+
+@st.cache_data
+def get_ollama_version():
+    try:
+        result = subprocess.run(
+            ["ollama", "--version"],
+            capture_output = True,
+            text = True
+        )
+        return result.stdout.strip()
+
+    except Exception:
+        return "Ollama not found"
+
+python_version = sys.version.split(" ")[0]
+streamlit_version = st.__version__
+
+if sys.version_info < (3, 10) or sys.version_info >= (3, 12):
+    st.warning("Use Python 3.10 or 3.11 for best compatibility")
 
 st.set_page_config(
     page_title = "Scholia AI",
@@ -111,6 +132,13 @@ if uploaded_files:
 
     st.sidebar.success("Document Ready");
     st.sidebar.markdown("Built with 💗 by Ramen")
+
+    st.sidebar.markdown("---")
+    st.sidebar.caption(
+        f"Python {python_version} | "
+        f"Streamlit {streamlit_version} | "
+        f"{get_ollama_version()}"
+    )
 
     #loaders
     @st.cache_resource
