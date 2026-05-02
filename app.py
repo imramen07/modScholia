@@ -207,7 +207,7 @@ if uploaded_files:
 
         #rerank
         rerank_query = query;
-        top_docs = rerank_docs(top_docs, rerank_query, reranker)
+        top_docs = rerank_docs(reranker, rerank_query, top_docs)
 
         context, pages_used = extract_relevant_sentences(top_docs, primary_query)
 
