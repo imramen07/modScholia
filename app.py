@@ -2,6 +2,7 @@ import sys
 import subprocess
 import streamlit as st
 import hashlib
+import os
 
 from collections import defaultdict
 
@@ -31,6 +32,8 @@ from utils.ensure_gpu import ensure_gpu
 from utils.render import render_chat
 
 from vectorstore.faiss_store import load_index, create_index
+
+os.makedirs("userdata", exist_ok = True)
 
 @st.cache_data
 def get_ollama_version():
@@ -82,7 +85,7 @@ if uploaded_files:
         "".join(sorted(file_hashes.values())).encode()
         ).hexdigest()
 
-    index_dir = f"faiss_index_{combined_hash}"
+    index_dir = f"userdata/faiss_index_{combined_hash}"
 
     file_changed = (
         "processed_file" not in st.session_state or
