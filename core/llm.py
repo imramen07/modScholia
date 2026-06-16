@@ -1,6 +1,7 @@
 import streamlit as st
 from langchain_ollama import OllamaLLM
 from config.settings import LLM_MODEL
+from config.settings import OLLAMA_BASEURL
 
 @st.cache_resource
 def load_llm():
@@ -8,10 +9,14 @@ def load_llm():
     try:
         llm = OllamaLLM(
             model = LLM_MODEL,
+            base_url = OLLAMA_BASEURL,
             num_ctx = 4096,
             temperature = 0.0,
             top_p = 0.9,
-            streaming = True
+            streaming = True,
+            # add - timeout and keepalive
+            timeout = 60,
+            keep_alive = "10m"
         )
         return llm
     
