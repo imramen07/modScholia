@@ -1,13 +1,14 @@
 import re
 from pipeline.intent import detect_intent
 
-def clean_query(query: str) -> str:
+# slightly enhances query, use this afterwards
+def better_query(query: str) -> str:
     
     return re.sub(r"\s+", " ", query).strip().lower()
 
-def rewrite_query(query: str):
+def rewrite_query(query):
     
-    q = clean_query(query)
+    q = better_query(query)
     intent = detect_intent(q)
 
     expansions = []
@@ -30,11 +31,5 @@ def rewrite_query(query: str):
         expansions.append(f"{q} explanation details information")
 
     #remove dupes
-    seen = set()
-    final_queries = []
-    for e in expansions:
-        if e not in seen:
-            seen.add(e)
-            final_queries.append(e)
-
-    return q, final_queries
+    final = list(dict.fromkeys(expansions))
+    return q, final
