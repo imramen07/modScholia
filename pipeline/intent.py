@@ -1,9 +1,9 @@
 def detect_intent(query):
     q = query.lower()
-    if "summarize" in q:
+    if any(word in q for word in ["summarize", "summary", "sum up", "tldr", "tl;dr"]):
         return "summary"
-    elif "explain" in q:
+    elif any(word in q for word in ["explain", "how does", "why is", "describe"]):
         return "explain"
-    elif "define" in q or "what is" in q:
+    elif any(word in q for word in ["define", "what is", "meaning of"]):
         return "definition"
     return "general"
