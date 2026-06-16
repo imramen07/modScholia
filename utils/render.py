@@ -1,6 +1,8 @@
+# todo - fastapi
 import streamlit as st
 
-def render_chat():
+def initandrender_chat():
     
-    for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
+    for msg in st.session_state.get("messages", []):
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
