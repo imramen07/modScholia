@@ -1,7 +1,11 @@
 def build_prompt(context, query, extra = "", history = ""):
     
+    # add - context limit, truncate to 4k chars
+    if len(context) > 4000:
+        context = context[:4000] + "...(truncated)"
+
     return f"""
-You are a highly reliable DOCUMENT-BASED question answering system. Your goal is to provide deep, detailed and well -structured explanations based on the provided document only.
+You are a DOCUMENT-BASED question answering assistant. Your goal is to provide deep, detailed and well -structured explanations based on the provided document only.
 
 SYSTEM RULES (STRICT)
 - Use ONLY the provided CONTEXT to answer the query.
