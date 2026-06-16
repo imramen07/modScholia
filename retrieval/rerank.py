@@ -1,14 +1,16 @@
-
+from config.settings import THRESHOLD_RERANK
 
 def rerank_docs(reranker, query, docs, top_k = 3):
     
-    if not docs:
-        return []
+    # better fallback , instead of empty response
+    if not docs or reranker is None:
+        return docs[:top_k]
     
     pairs = [(query, doc.page_content) for doc in docs]
 
     try:
-        scores = reranker.predict(pairs)
+        # add - batch size
+        scores = reranker.predict(pairs, batsize = 32)
     
     except Exception:
         return docs[:top_k]
@@ -21,23 +23,25 @@ def rerank_docs(reranker, query, docs, top_k = 3):
         reverse = True
     )
 
-    docs_sorted = [doc for doc, _ in reranked]
-    score_sorted = [score for _, score in reranked]
-
-    max_score = max(score_sorted)
-    min_score = min(score_sorted)
+    docs_sort = [doc for doc, _ in reranked]
+    maxScore = max(score_sort)
+    score_sort = [score for _, score in reranked]
+    minScore = min(score_sort)
 
     threshold = max(
-        min_score,
-        max_score * 0.6
+        minScore,
+        maxScore * THRESHOLD_RERANK
     )
 
+    # use threshold to filter docs
     top_docs = [
         doc for doc, score in reranked
         if score >= threshold
     ]
     
+    # fallback - empty topdocs
+    # push all sorted docs
     if not top_docs:
-        top_docs = docs_sorted[:top_k]
+        top_docs = docs_sort[:top_k]
     
     return top_docs[:top_k]
