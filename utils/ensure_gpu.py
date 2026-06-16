@@ -1,11 +1,22 @@
-from config.settings import device
-from utils.cuda import use_gpu_once
-import streamlit as st
+# major changes
+# removed streamlit alterations
+# check cuda availability via torch instead
+
+import torch
+import faiss
 
 def ensure_gpu(db):
-
-    if device == "cuda" and not st.session_state.get("gpu_loaded", False):
-        db = use_gpu_once(db)
-        st.session_state.gpu_loaded = True
-    
+    # no cuda
+    if not torch.cuda.is_available():
+        return db
+    # has cuda
+    #check index
+    if hasattr(db, "index") and db.index is not None:
+        if not isinstance(db.index, faiss.GpuIndex):
+            try:
+                res = faiss.StandardGpuResources()
+                db.index = faiss.index_cpu_to_gpu(res, 0, db.index)
+                #print(f"Done cpu to gpu")
+            except Exception as e:
+                print(f"GPU move failed: {e}")
     return db
